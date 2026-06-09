@@ -1,9 +1,16 @@
 import sys
 import os
 
-# Add backend/ to path so the `app` package and `config` module are importable
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# ---------------------------------------------------------------------------
+# Ensure backend/ is on sys.path so `app` package and `config` module resolve
+# ---------------------------------------------------------------------------
+_backend_dir = os.path.join(os.path.dirname(__file__), '..', 'backend')
+sys.path.insert(0, os.path.abspath(_backend_dir))
 
 from app import create_app
 
+# `app` must be module-level for Vercel's Python runtime to find the WSGI callable
 app = create_app()
+
+# Vercel also accepts `handler` as an alias — expose both for compatibility
+handler = app

@@ -3,7 +3,7 @@ import json
 import logging
 
 import bleach
-from flask import Blueprint, current_app, jsonify, request, send_file
+from flask import Blueprint, abort, current_app, jsonify, request, send_file
 
 from app import db, limiter
 from app.models.resume import ResumeAnalysis
@@ -43,19 +43,25 @@ def analyze_resume():
         logger.error("Unexpected analysis error: %s", exc)
         return jsonify({'error': 'AI analysis failed. Please try again.'}), 500
 
+
     if not analysis:
         return jsonify({'error': 'AI returned an empty analysis. Check your Gemini API key.'}), 500
 
     # Persist to database
-    record = ResumeAnalysis(
-        filename=filename,
-        resume_text=resume_text[:5000],
-        analysis_json=json.dumps(analysis),
-        ats_score=int(analysis.get('ats_score', 0)),
-        recruiter_score=float(analysis.get('recruiter_impression', 0.0)),
-    )
-    db.session.add(record)
-    db.session.commit()
+    try:
+        record = ResumeAnalysis(
+            filename=filename,
+            resume_text=resume_text[:5000],
+            analysis_json=json.dumps(analysis),
+            ats_score=int(analysis.get('ats_score', 0)),
+            recruiter_score=float(analysis.get('recruiter_impression', 0.0)),
+        )
+        db.session.add(record)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.error("Database write failed: %s", exc)
+        return jsonify({'error': 'Failed to save analysis. Please try again.'}), 500
 
     return jsonify({
         'success': True,
@@ -67,7 +73,9 @@ def analyze_resume():
 @analyze_bp.route('/report/<int:report_id>', methods=['GET'])
 def get_report(report_id):
     """GET /api/report/<id> – Fetch a single stored analysis."""
-    record = ResumeAnalysis.query.get_or_404(report_id)
+    record = db.session.get(ResumeAnalysis, report_id)
+    if record is None:
+        abort(404)
     return jsonify(record.to_dict()), 200
 
 
@@ -81,7 +89,9 @@ def download_report(report_id):
     if fmt not in ('pdf', 'txt'):
         return jsonify({'error': "format must be 'pdf' or 'txt'"}), 400
 
-    record = ResumeAnalysis.query.get_or_404(report_id)
+    record = db.session.get(ResumeAnalysis, report_id)
+    if record is None:
+        abort(404)
     try:
         analysis = json.loads(record.analysis_json or '{}')
     except json.JSONDecodeError:

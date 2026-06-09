@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, abort, jsonify, request
 
 from app import db
 from app.models.resume import ResumeAnalysis
@@ -37,7 +37,14 @@ def get_history():
 @history_bp.route('/history/<int:analysis_id>', methods=['DELETE'])
 def delete_analysis(analysis_id):
     """DELETE /api/history/<id> – Remove a stored analysis."""
-    record = ResumeAnalysis.query.get_or_404(analysis_id)
-    db.session.delete(record)
-    db.session.commit()
+    record = db.session.get(ResumeAnalysis, analysis_id)
+    if record is None:
+        abort(404)
+    try:
+        db.session.delete(record)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.error("Delete failed: %s", exc)
+        return jsonify({'error': 'Failed to delete analysis.'}), 500
     return jsonify({'success': True, 'message': 'Analysis deleted successfully'}), 200

@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 
@@ -16,7 +16,7 @@ class ResumeAnalysis(db.Model):
     analysis_json = db.Column(db.Text, nullable=True)
     ats_score = db.Column(db.Integer, nullable=True)
     recruiter_score = db.Column(db.Float, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         analysis = {}

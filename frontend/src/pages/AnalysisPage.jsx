@@ -22,15 +22,18 @@ const TABS = [
 ]
 
 /* ── Helper components ─────────────────────────────────────── */
+const SKELETON_WIDTHS = ['72%', '88%', '64%', '95%', '78%', '83%', '70%', '91%']
+
 function Skeleton({ lines = 4 }) {
   return (
     <div className="space-y-3">
       {Array.from({ length: lines }).map((_, i) => (
-        <div key={i} className="h-4 rounded skeleton" style={{ width: `${70 + Math.random() * 30}%` }} />
+        <div key={i} className="h-4 rounded skeleton" style={{ width: SKELETON_WIDTHS[i % SKELETON_WIDTHS.length] }} />
       ))}
     </div>
   )
 }
+
 
 function Tag({ text, color = 'primary' }) {
   const map = {

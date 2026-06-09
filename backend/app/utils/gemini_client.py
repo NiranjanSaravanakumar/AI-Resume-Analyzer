@@ -15,6 +15,22 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _MODEL_NAME = 'gemini-2.5-flash'
 
+# Module-level client cache — initialized once per worker process
+_client: genai.Client | None = None
+
+
+def _get_client() -> genai.Client:
+    """Return the cached Gemini client, creating it on first call."""
+    global _client
+    if _client is None:
+        api_key = os.environ.get('GEMINI_API_KEY', '').strip()
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is not configured. Add it to your .env file.")
+        _client = genai.Client(api_key=api_key)
+        logger.info("Gemini client initialized.")
+    return _client
+
+
 # Default values used when a field is missing or the model omits it
 _DEFAULTS = {
     "ats_score": 50,
@@ -54,11 +70,7 @@ def analyze_with_gemini(resume_text: str, job_description: str = '') -> dict:
     Falls back to regex extraction if the model still wraps output in markdown.
     Always returns a complete dict with defaults for any missing keys.
     """
-    api_key = os.environ.get('GEMINI_API_KEY', '').strip()
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY is not configured. Add it to your .env file.")
-
-    client = genai.Client(api_key=api_key)
+    client = _get_client()  # uses cached instance
     prompt = get_analysis_prompt(resume_text, job_description=job_description)
 
     logger.info("Sending resume to Gemini (%d chars)…", len(resume_text))
