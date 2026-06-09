@@ -7,6 +7,7 @@ import os
 _backend_dir = os.path.join(os.path.dirname(__file__), '..', 'backend')
 sys.path.insert(0, os.path.abspath(_backend_dir))
 
+# pyright: ignore [reportMissingImports]
 from app import create_app
 
 # `app` must be module-level for Vercel's Python runtime to find the WSGI callable
