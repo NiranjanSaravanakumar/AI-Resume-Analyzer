@@ -1,6 +1,12 @@
-from app import db
-from datetime import datetime, timezone
+from __future__ import annotations
+
 import json
+from datetime import datetime, timezone
+from typing import Optional
+
+from app import db
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Text, Integer, Float, String, DateTime
 
 
 class ResumeAnalysis(db.Model):
@@ -8,18 +14,25 @@ class ResumeAnalysis(db.Model):
 
     __tablename__ = 'resume_analyses'
 
-    id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(255), nullable=False)
-    # Store a truncated snapshot of the original text (not the full text for storage efficiency)
-    resume_text = db.Column(db.Text, nullable=False)
-    # Full Gemini JSON response stored as a string
-    analysis_json = db.Column(db.Text, nullable=True)
-    ats_score = db.Column(db.Integer, nullable=True)
-    recruiter_score = db.Column(db.Float, nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    # --- columns (Mapped[T] syntax gives Pylance full type awareness) --------
+    id:            Mapped[int]            = mapped_column(Integer, primary_key=True)
+    filename:      Mapped[str]            = mapped_column(String(255), nullable=False)
+    resume_text:   Mapped[str]            = mapped_column(Text, nullable=False)
+    analysis_json: Mapped[Optional[str]]  = mapped_column(Text, nullable=True)
+    ats_score:     Mapped[Optional[int]]  = mapped_column(Integer, nullable=True)
+    recruiter_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    created_at:    Mapped[datetime]       = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
 
-    def to_dict(self):
-        analysis = {}
+    # -------------------------------------------------------------------------
+    # Serialisers
+    # -------------------------------------------------------------------------
+
+    def to_dict(self) -> dict:
+        analysis: dict = {}
         if self.analysis_json:
             try:
                 analysis = json.loads(self.analysis_json)
@@ -35,7 +48,7 @@ class ResumeAnalysis(db.Model):
             'analysis': analysis,
         }
 
-    def to_summary_dict(self):
+    def to_summary_dict(self) -> dict:
         """Lightweight version used for the history list (no full analysis)."""
         return {
             'id': self.id,
