@@ -36,16 +36,15 @@ class ResumeAnalysis(db.Model):
     ) -> None:
         """
         Explicit __init__ so Pylance knows exactly which keyword arguments
-        this model accepts. SQLAlchemy's declarative base would generate this
-        automatically at runtime, but static type checkers cannot see that.
+        this model accepts. SQLAlchemy column values are plain Python instance
+        attributes — we assign them directly instead of calling super().__init__()
+        with kwargs, which Pylance incorrectly maps to object.__init__.
         """
-        super().__init__(
-            filename=filename,
-            resume_text=resume_text,
-            analysis_json=analysis_json,
-            ats_score=ats_score,
-            recruiter_score=recruiter_score,
-        )
+        self.filename = filename
+        self.resume_text = resume_text
+        self.analysis_json = analysis_json
+        self.ats_score = ats_score
+        self.recruiter_score = recruiter_score
 
     # -------------------------------------------------------------------------
     # Serialisers
